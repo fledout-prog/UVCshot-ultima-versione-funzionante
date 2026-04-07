@@ -1,0 +1,45 @@
+{
+  "buildFiles": [
+    "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/edoardo/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/edoardo/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "libjpeg-turbo::@6890427a1f51a3e7e1df": {
+      "artifactName": "libjpeg-turbo",
+      "abi": "arm64-v8a",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibjpeg-turbo.a",
+      "runtimeFiles": []
+    },
+    "libuvc::@6890427a1f51a3e7e1df": {
+      "artifactName": "libuvc",
+      "abi": "arm64-v8a",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibuvc.a",
+      "runtimeFiles": []
+    },
+    "uvcshoot::@6890427a1f51a3e7e1df": {
+      "artifactName": "uvcshoot",
+      "abi": "arm64-v8a",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/build/intermediates/cxx/Debug/401d4b6n/obj/arm64-v8a/libuvcshoot.so",
+      "runtimeFiles": []
+    },
+    "libusb::@6890427a1f51a3e7e1df": {
+      "artifactName": "libusb",
+      "abi": "arm64-v8a",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibusb.a",
+      "runtimeFiles": []
+    }
+  }
+}

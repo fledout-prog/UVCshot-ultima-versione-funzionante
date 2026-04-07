@@ -1,0 +1,1 @@
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/src/main/cpp/CMakeLists.txt

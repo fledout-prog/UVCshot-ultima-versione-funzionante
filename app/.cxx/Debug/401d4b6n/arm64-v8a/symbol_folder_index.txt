@@ -1,0 +1,1 @@
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/build/intermediates/cxx/Debug/401d4b6n/obj/arm64-v8a

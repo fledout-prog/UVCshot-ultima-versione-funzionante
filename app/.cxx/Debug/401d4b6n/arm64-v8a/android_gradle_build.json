@@ -1,0 +1,58 @@
+{
+  "buildFiles": [
+    "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/src/main/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/edoardo/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/edoardo/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "libjpeg-turbo::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "libjpeg-turbo",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibjpeg-turbo.a"
+    },
+    "libusb::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "libusb",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibusb.a"
+    },
+    "libuvc::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "libuvc",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/liblibuvc.a"
+    },
+    "uvcshoot::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "uvcshoot",
+      "output": "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/build/intermediates/cxx/Debug/401d4b6n/obj/arm64-v8a/libuvcshoot.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/Users/edoardo/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/Users/edoardo/Library/Android/sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [
+    "c"
+  ],
+  "cppFileExtensions": [
+    "cpp"
+  ]
+}

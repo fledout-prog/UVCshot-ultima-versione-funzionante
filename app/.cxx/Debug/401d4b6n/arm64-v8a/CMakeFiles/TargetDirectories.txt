@@ -1,0 +1,6 @@
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/libjpeg-turbo.dir
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/libusb.dir
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/libuvc.dir
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/uvcshoot.dir
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/edit_cache.dir
+/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a/CMakeFiles/rebuild_cache.dir

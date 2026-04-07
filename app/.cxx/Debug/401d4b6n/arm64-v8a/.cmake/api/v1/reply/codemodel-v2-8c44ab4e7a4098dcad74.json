@@ -1,0 +1,87 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10.0"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "uvcshoot",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "libjpeg-turbo::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-libjpeg-turbo-Debug-f22cda1b33a5496d3279.json",
+					"name" : "libjpeg-turbo",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "libusb::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-libusb-Debug-60c81a9f98d8405a98e4.json",
+					"name" : "libusb",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "libuvc::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-libuvc-Debug-3358f9c742e7cd54b761.json",
+					"name" : "libuvc",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uvcshoot::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uvcshoot-Debug-44fbacfbcd793b01077f.json",
+					"name" : "uvcshoot",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/.cxx/Debug/401d4b6n/arm64-v8a",
+		"source" : "/Users/edoardo/AndroidStudioProjects/PRANZO/uvc shot ultima versione funzionante /app/src/main/cpp"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 3
+	}
+}
