@@ -314,6 +314,9 @@ class UvcController(
             // frame updates lastFrameRenderedAtMs via FrameCallback.onFrame().
             NativeBridge.nativeSetFrameListener(nativeHandle, frameCallback)
             Log.d("UVC", "UVC_STATE: STREAM_START — invoking nativeStartMjpegStream")
+            // Reset frame timestamp so the watchdog does not treat the new stream as
+            // immediately unhealthy based on a stale timestamp from a previous session.
+            lastFrameRenderedAtMs = 0L
             val ok = NativeBridge.nativeStartMjpegStream(nativeHandle, 1280, 720, 30)
             streaming = ok
             Log.d(
@@ -894,6 +897,9 @@ class UvcController(
         attachedSurfaceGeneration = currentSurfaceGeneration
         NativeBridge.nativeSetFrameListener(nativeHandle, frameCallback)
 
+        // Reset frame timestamp before restarting so the watchdog does not immediately
+        // declare the new stream unhealthy due to a stale timestamp from a prior session.
+        lastFrameRenderedAtMs = 0L
         val ok = NativeBridge.nativeStartMjpegStream(nativeHandle, 1280, 720, 30)
         streaming = ok
         Log.d(
@@ -910,6 +916,7 @@ class UvcController(
      * stream needs to be explicitly cycled (stop → re-attach surface → start).
      * Does nothing if the camera is not currently open.
      */
+    @Synchronized
     fun restartPreviewStreamOnly() {
         Log.d(
             "UVC",
@@ -930,6 +937,9 @@ class UvcController(
             attachedSurfaceGeneration = currentSurfaceGeneration
         }
         NativeBridge.nativeSetFrameListener(nativeHandle, frameCallback)
+        // Reset frame timestamp so the watchdog does not immediately declare the
+        // restarted stream unhealthy based on a stale timestamp from a prior session.
+        lastFrameRenderedAtMs = 0L
         val ok = NativeBridge.nativeStartMjpegStream(nativeHandle, 1280, 720, 30)
         streaming = ok
         Log.d("UVC", "UVC_HEALTH: restartPreviewStreamOnly complete — streaming=$ok")

@@ -40,6 +40,14 @@ class MainActivity : AppCompatActivity() {
     private var cameraService: CameraService? = null
     private var serviceBound = false
 
+    /**
+     * The currently pending debounced stream-check [Runnable], or null if none is
+     * scheduled.  Replaced (with prior cancellation) by every lifecycle hook that
+     * needs a delayed restart check, so at most ONE delayed check is ever pending
+     * regardless of how many lifecycle events fire in quick succession.
+     */
+    private var pendingResumeCheck: Runnable? = null
+
     // -----------------------------------------------------------------------
     // Service connection
     // -----------------------------------------------------------------------
@@ -63,18 +71,10 @@ class MainActivity : AppCompatActivity() {
                 // Riaggancio leggero sempre, senza partire con recovery pesanti.
                 cameraService?.attachSurface(surface)
 
-                // Piccolo delay: lasciamo assestare surface/native prima di decidere.
-                previewSurface.postDelayed({
-                    val service = cameraService ?: return@postDelayed
-                    Log.d(
-                        TAG,
-                        "UVC_FIX: SERVICE_BIND delayed check — streaming=${service.isStreaming()}"
-                    )
-                    if (!service.isStreaming()) {
-                        Log.d(TAG, "UVC_FIX: SERVICE_BIND → restartPreviewStreamOnly()")
-                        service.restartPreviewStreamOnly()
-                    }
-                }, RESUME_RESTART_DELAY_MS)
+                // Single debounced check: cancels any already-pending check so that
+                // rapid onServiceConnected + surfaceCreated + onResume bursts produce
+                // only ONE delayed restart, not three concurrent ones.
+                scheduleStreamCheck()
             } else {
                 Log.d(TAG, "UVC_FIX: SERVICE_BIND — surface non ancora valida, aspetto surfaceCreated")
             }
@@ -112,21 +112,10 @@ class MainActivity : AppCompatActivity() {
             // 1) riaggancia sempre la surface
             cameraService?.attachSurface(surface)
 
-            // 2) breve delay per evitare race con native/surface pipeline
-            previewSurface.postDelayed({
-                val service = cameraService ?: return@postDelayed
-
-                Log.d(
-                    TAG,
-                    "UVC_FIX: SURFACE_CREATE delayed check — streaming=${service.isStreaming()}"
-                )
-
-                // 3) se non streamma, riavvia SOLO lo stream
-                if (!service.isStreaming()) {
-                    Log.d(TAG, "UVC_FIX: SURFACE_CREATE → restartPreviewStreamOnly()")
-                    service.restartPreviewStreamOnly()
-                }
-            }, RESUME_RESTART_DELAY_MS)
+            // 2) single debounced check — cancels any already-pending restart check
+            //    so onServiceConnected + surfaceCreated + onResume bursts produce only
+            //    ONE delayed restart, not three concurrent ones.
+            scheduleStreamCheck()
         }
 
         override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
@@ -195,20 +184,10 @@ class MainActivity : AppCompatActivity() {
             // prima riaggancio leggero.
             cameraService?.attachSurface(surface)
 
-            // Poi, se serve davvero, stream restart only.
-            previewSurface.postDelayed({
-                val service = cameraService ?: return@postDelayed
-
-                Log.d(
-                    TAG,
-                    "UVC_FIX: ACT_RESUME delayed check — streaming=${service.isStreaming()}"
-                )
-
-                if (!service.isStreaming()) {
-                    Log.d(TAG, "UVC_FIX: ACT_RESUME → restartPreviewStreamOnly()")
-                    service.restartPreviewStreamOnly()
-                }
-            }, RESUME_RESTART_DELAY_MS)
+            // Single debounced check — cancels any already-pending restart check so that
+            // onResume + surfaceCreated + onServiceConnected bursts produce only ONE
+            // delayed restart, not three concurrent ones.
+            scheduleStreamCheck()
         }
     }
 
@@ -256,6 +235,29 @@ class MainActivity : AppCompatActivity() {
         cameraService?.requestCapture()
             ?: Log.w(TAG, "triggerCapture: service not yet bound")
         updateStatus("Capture requested")
+    }
+
+    /**
+     * Schedule a debounced stream-restart check.
+     *
+     * Cancels any previously pending check before scheduling a new one so that
+     * rapid [onServiceConnected] + [surfaceCreated] + [onResume] bursts within the
+     * same startup or resume cycle produce exactly ONE delayed restart attempt,
+     * eliminating the race from three concurrent [restartPreviewStreamOnly] calls.
+     */
+    private fun scheduleStreamCheck() {
+        pendingResumeCheck?.let { previewSurface.removeCallbacks(it) }
+        val r = Runnable {
+            pendingResumeCheck = null
+            val service = cameraService ?: return@Runnable
+            Log.d(TAG, "UVC_FIX: DEBOUNCED check — streaming=${service.isStreaming()}")
+            if (!service.isStreaming()) {
+                Log.d(TAG, "UVC_FIX: DEBOUNCED → restartPreviewStreamOnly()")
+                service.restartPreviewStreamOnly()
+            }
+        }
+        pendingResumeCheck = r
+        previewSurface.postDelayed(r, RESUME_RESTART_DELAY_MS)
     }
 
     /**

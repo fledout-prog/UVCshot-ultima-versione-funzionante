@@ -212,6 +212,14 @@ struct NativeContext {
 
     // Optional Kotlin frame listener (kept for capture / status events)
     jobject frameListenerGlobalRef = nullptr;
+    // Cached JNI method ID for FrameCallback.onFrame — populated once in nativeSetFrameListener
+    jmethodID onFrameMethodId = nullptr;
+
+    // Last ANativeWindow buffer geometry configured via ANativeWindow_setBuffersGeometry.
+    // Reset to 0 in nativeSetSurface so the first frame after a surface swap always
+    // reconfigures the geometry, but subsequent same-size frames skip the expensive call.
+    int configuredWidth = 0;
+    int configuredHeight = 0;
 };
 
 /* -----------------------------------------------------------------------
@@ -230,6 +238,7 @@ static void clearFrameListenerLocked(JNIEnv* env, NativeContext* ctx) {
         env->DeleteGlobalRef(ctx->frameListenerGlobalRef);
         ctx->frameListenerGlobalRef = nullptr;
     }
+    ctx->onFrameMethodId = nullptr;
 }
 
 static void stopStreamLocked(NativeContext* ctx) {
@@ -282,11 +291,22 @@ static void renderMjpegFrame(NativeContext* ctx,
                              size_t jpegLen)
 {
     // --- 1. Obtain the current Surface/window under mutex ---
+    // Also update the frame counter and check streamRunning here (consolidated from
+    // mjpegFrameCallback) so there is no window between two separate lock acquisitions
+    // where nativeSetSurface(null) could zero out ctx->window.
     ANativeWindow* win = nullptr;
     {
         std::lock_guard<std::mutex> lock(ctx->mutex);
-        win = ctx->window;
+        // Early-exit before touching win: if the stream was stopped while we were
+        // waiting on the mutex, drop this frame immediately.
         if (!ctx->streamRunning) return;
+        ctx->frameLogCounter++;
+        if ((ctx->frameLogCounter % 30u) == 0u) {
+            LOGD("MJPEG render: bytes=%zu seq=%u", jpegLen, ctx->frameLogCounter);
+        }
+        // Assign win only after the streamRunning guard so a stopped-stream early
+        // return never leaves win in a partially-acquired state.
+        win = ctx->window;
         if (!win) {
             // Surface not yet available; frame is intentionally dropped.
             // Log once every 60 frames to aid diagnosis without spamming.
@@ -296,6 +316,8 @@ static void renderMjpegFrame(NativeContext* ctx,
             }
             return;
         }
+        // Increment ref-count while holding the mutex so the window cannot be
+        // freed by a concurrent nativeSetSurface(null) between here and its use below.
         ANativeWindow_acquire(win);
     }
 
@@ -352,7 +374,24 @@ static void renderMjpegFrame(NativeContext* ctx,
     // End of Stage 1 — pixel buffer is fully filled; ANativeWindow still unlocked
 
     // --- Stage 2: Blit pixel buffer to ANativeWindow ---
-    ANativeWindow_setBuffersGeometry(win, imgW, imgH, WINDOW_FORMAT_RGBX_8888);
+    // Reconfigure buffer geometry only when the image dimensions change.
+    // ANativeWindow_setBuffersGeometry is expensive and can transiently invalidate
+    // the surface; calling it 30 times/second (once per frame) caused intermittent
+    // black screens and race conditions with nativeSetSurface().  configuredWidth/Height
+    // are reset to 0 in nativeSetSurface() so the first frame after a surface swap
+    // always reconfigures, but subsequent same-size frames skip this call entirely.
+    //
+    // Note: win was obtained under the first mutex and kept alive via ANativeWindow_acquire,
+    // so it remains valid for use here even if nativeSetSurface(null) fires concurrently
+    // and releases ctx->window (that only decrements the ref-count; our acquire keeps it open).
+    {
+        std::lock_guard<std::mutex> lock(ctx->mutex);
+        if (imgW != ctx->configuredWidth || imgH != ctx->configuredHeight) {
+            ANativeWindow_setBuffersGeometry(win, imgW, imgH, WINDOW_FORMAT_RGBX_8888);
+            ctx->configuredWidth = imgW;
+            ctx->configuredHeight = imgH;
+        }
+    }
 
     ANativeWindow_Buffer buf{};
     if (ANativeWindow_lock(win, &buf, nullptr) == 0) {
@@ -373,6 +412,35 @@ static void renderMjpegFrame(NativeContext* ctx,
     }
 
     ANativeWindow_release(win);
+
+    // --- Notify the Kotlin FrameCallback so lastFrameRenderedAtMs is updated ---
+    // This is what drives the health watchdog in UvcController: without this call
+    // isPreviewHealthy() always returns false and the watchdog destroys a working stream.
+    // The method ID was cached in nativeSetFrameListener to avoid per-frame reflection.
+    // Note: win has been released above; this section does not use win at all.
+    {
+        std::lock_guard<std::mutex> lock(ctx->mutex);
+        if (ctx->frameListenerGlobalRef && ctx->onFrameMethodId && gJvm) {
+            JNIEnv* env = nullptr;
+            bool attached = false;
+            if (gJvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) == JNI_EDETACHED) {
+                gJvm->AttachCurrentThread(&env, nullptr);
+                attached = true;
+            }
+            if (env) {
+                env->CallVoidMethod(ctx->frameListenerGlobalRef, ctx->onFrameMethodId,
+                                    nullptr, static_cast<jint>(jpegLen));
+                if (env->ExceptionCheck()) {
+                    LOGE("renderMjpegFrame: JNI onFrame callback threw an exception — clearing");
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                }
+            }
+            if (attached) {
+                gJvm->DetachCurrentThread();
+            }
+        }
+    }
 }
 
 /* -----------------------------------------------------------------------
@@ -382,19 +450,10 @@ static void mjpegFrameCallback(uvc_frame_t* frame, void* user_ptr) {
     auto* ctx = reinterpret_cast<NativeContext*>(user_ptr);
     if (!ctx || !frame || !frame->data || frame->data_bytes == 0) return;
 
-    // Throttled logging (every 30 frames)
-    {
-        std::lock_guard<std::mutex> lock(ctx->mutex);
-        if (!ctx->streamRunning) return;
-        ctx->frameLogCounter++;
-        if ((ctx->frameLogCounter % 30u) == 0u) {
-            LOGD("MJPEG cb: fmt=%u %ux%u bytes=%zu seq=%u",
-                 frame->frame_format, frame->width, frame->height,
-                 frame->data_bytes, frame->sequence);
-        }
-    }
-
-    // Render to Surface (no JNI round-trip for preview frames)
+    // streamRunning check, frameLogCounter update, and JNI notification are all
+    // handled inside renderMjpegFrame under the same mutex acquisition, eliminating
+    // the window between two separate lock acquisitions that previously allowed
+    // nativeSetSurface(null) to zero out ctx->window between the two lock scopes.
     renderMjpegFrame(ctx,
                      reinterpret_cast<const uint8_t*>(frame->data),
                      frame->data_bytes);
@@ -470,6 +529,10 @@ Java_com_example_uvcshoot_NativeBridge_nativeSetSurface(
     }
 
     ctx->window = ANativeWindow_fromSurface(env, surface);
+    // Reset tracked geometry so the first frame rendered on this new window always
+    // calls ANativeWindow_setBuffersGeometry, regardless of prior dimension state.
+    ctx->configuredWidth = 0;
+    ctx->configuredHeight = 0;
     LOGD("nativeSetSurface: new window=%p streamRunning=%d", ctx->window, ctx->streamRunning ? 1 : 0);
 }
 
@@ -486,7 +549,14 @@ Java_com_example_uvcshoot_NativeBridge_nativeSetFrameListener(
 
     if (listener) {
         ctx->frameListenerGlobalRef = env->NewGlobalRef(listener);
-        LOGD("frameListenerGlobalRef set");
+        // Cache the onFrame method ID once here to avoid per-frame GetObjectClass +
+        // GetMethodID lookups inside the hot renderMjpegFrame path.
+        jclass cls = env->GetObjectClass(ctx->frameListenerGlobalRef);
+        if (cls) {
+            ctx->onFrameMethodId = env->GetMethodID(cls, "onFrame", "([BI)V");
+            env->DeleteLocalRef(cls);
+        }
+        LOGD("frameListenerGlobalRef set, onFrameMethodId=%p", ctx->onFrameMethodId);
     }
 }
 
