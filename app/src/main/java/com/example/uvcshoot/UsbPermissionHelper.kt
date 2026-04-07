@@ -14,19 +14,17 @@ class UsbPermissionHelper(private val context: Context) {
     }
 
     fun requestPermission(usbManager: UsbManager, device: UsbDevice) {
+        val intent = Intent(ACTION_USB_PERMISSION).apply {
+            setPackage(context.packageName)
+        }
+
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
         } else {
             PendingIntent.FLAG_UPDATE_CURRENT
         }
 
-        val permissionIntent = PendingIntent.getBroadcast(
-            context,
-            0,
-            Intent(ACTION_USB_PERMISSION),
-            flags
-        )
-
+        val permissionIntent = PendingIntent.getBroadcast(context, 0, intent, flags)
         usbManager.requestPermission(device, permissionIntent)
     }
 }
