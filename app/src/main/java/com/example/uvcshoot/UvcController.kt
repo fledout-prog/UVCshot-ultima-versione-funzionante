@@ -281,18 +281,24 @@ class UvcController(
             return
         }
         if (streaming) {
-            // Already streaming: refresh the native surface handle in case the
-            // surface was recreated (e.g. surfaceChanged dimension update) without
-            // restarting the pipeline.
-            Log.d("UVC", "tryStartPreview: already streaming — refreshing surface reference only")
-            if (cs != null && cs.isValid && nativeHandle != 0L) {
-                NativeBridge.nativeSetSurface(nativeHandle, cs)
-                surfaceAttached = true
-                attachedSurfaceGeneration = currentSurfaceGeneration
+            // Only call nativeSetSurface if the surface actually changed (different generation).
+            // Calling it redundantly releases+reacquires the ANativeWindow, which races with
+            // the native MJPEG render thread and causes black screen.
+            if (currentSurfaceGeneration != attachedSurfaceGeneration) {
                 Log.d(
                     "UVC",
-                    "tryStartPreview: nativeSetSurface called (streaming refresh) " +
-                        "attachedSurfaceGeneration=$attachedSurfaceGeneration"
+                    "tryStartPreview: already streaming — surface CHANGED " +
+                        "(gen $attachedSurfaceGeneration→$currentSurfaceGeneration), refreshing"
+                )
+                if (cs != null && cs.isValid && nativeHandle != 0L) {
+                    NativeBridge.nativeSetSurface(nativeHandle, cs)
+                    surfaceAttached = true
+                    attachedSurfaceGeneration = currentSurfaceGeneration
+                }
+            } else {
+                Log.d(
+                    "UVC",
+                    "tryStartPreview: already streaming, same surface — skipping redundant nativeSetSurface"
                 )
             }
             return
@@ -641,10 +647,19 @@ class UvcController(
                 "hardRecoverCameraSession: DUPLICATE OPEN SUPPRESSED — camera already open and streaming; " +
                     "refreshing surface only (cameraOpened=$cameraOpened streaming=$streaming)"
             )
-            val cs = currentSurface
-            if (cs != null && cs.isValid && nativeHandle != 0L) {
-                NativeBridge.nativeSetSurface(nativeHandle, cs)
-                Log.d("UVC", "hardRecoverCameraSession: surface refreshed on live session")
+            // Only refresh the native surface handle if the surface actually changed.
+            // Calling nativeSetSurface redundantly releases+reacquires the ANativeWindow,
+            // which races with the native MJPEG render thread and causes black screen.
+            if (currentSurfaceGeneration != attachedSurfaceGeneration) {
+                val cs = currentSurface
+                if (cs != null && cs.isValid && nativeHandle != 0L) {
+                    NativeBridge.nativeSetSurface(nativeHandle, cs)
+                    surfaceAttached = true
+                    attachedSurfaceGeneration = currentSurfaceGeneration
+                    Log.d("UVC", "hardRecoverCameraSession: surface refreshed on live session (generation changed)")
+                }
+            } else {
+                Log.d("UVC", "hardRecoverCameraSession: same surface generation — skipping redundant nativeSetSurface")
             }
             return
         }
