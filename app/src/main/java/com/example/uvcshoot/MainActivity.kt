@@ -153,6 +153,7 @@ class MainActivity : AppCompatActivity() {
         captureButton = findViewById(R.id.captureButton)
         statusText = findViewById(R.id.statusText)
 
+        previewSurface.holder.setFormat(android.graphics.PixelFormat.RGBX_8888)
         previewSurface.holder.addCallback(surfaceCallback)
         captureButton.setOnClickListener { triggerCapture() }
 

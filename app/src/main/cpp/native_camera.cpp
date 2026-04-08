@@ -394,7 +394,8 @@ static void renderMjpegFrame(NativeContext* ctx,
     }
 
     ANativeWindow_Buffer buf{};
-    if (ANativeWindow_lock(win, &buf, nullptr) == 0) {
+    int lockResult = ANativeWindow_lock(win, &buf, nullptr);
+    if (lockResult == 0) {
         auto* dst = reinterpret_cast<uint8_t*>(buf.bits);
         const size_t dstStride = static_cast<size_t>(buf.stride) * 4;
 
@@ -409,6 +410,8 @@ static void renderMjpegFrame(NativeContext* ctx,
             }
         }
         ANativeWindow_unlockAndPost(win);
+    } else {
+        LOGE("ANativeWindow_lock failed: %d — frame dropped (window may have been invalidated)", lockResult);
     }
 
     ANativeWindow_release(win);
